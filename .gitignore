@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.tmp-*
+data/.tmp-*
+data/history/.tmp-*
+*.db-journal
+history.db
