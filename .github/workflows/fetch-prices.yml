@@ -4,7 +4,7 @@ on:
   schedule:
     # 06:17 UTC daily. Off-the-hour on purpose - GitHub's scheduler gets
     # congested right at :00, which can delay jobs queued exactly then.
-    - cron: "17 6 * * *"
+    - cron: "15 22 * * *"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 permissions:
