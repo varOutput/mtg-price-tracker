@@ -1,0 +1,46 @@
+name: Fetch Scryfall prices
+
+on:
+  schedule:
+    # 06:17 UTC daily. Off-the-hour on purpose - GitHub's scheduler gets
+    # congested right at :00, which can delay jobs queued exactly then.
+    - cron: "17 6 * * *"
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+permissions:
+  contents: write   # needed so the job can commit data/ back to the repo
+
+concurrency:
+  group: fetch-prices
+  cancel-in-progress: false   # if a run is still going, let it finish rather than clobbering it
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run price fetch
+        run: python scripts/fetch_prices.py
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Price snapshot: $(date -u +'%Y-%m-%d')"
+            git push
+          fi
