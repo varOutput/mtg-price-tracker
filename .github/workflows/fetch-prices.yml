@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   fetch:
-    runs-on: [self-hosted, bazzite] #formerly ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check out repo
