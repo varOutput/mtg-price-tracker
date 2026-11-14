@@ -42,6 +42,16 @@ Columns:
   is EUR; everything else is USD. If MTGJSON adds a new provider, its
   columns are appended automatically.
 
+History starts 2026-08-15: `scripts/backfill_mtgjson_history.py` filled
+the ~90 days MTGJSON keeps in its `AllPrices` file (MTGJSON itself has no
+data for 2026-08-29 and 2026-10-14). It never overwrites an existing day, so
+it's safe to re-run, e.g. to fill a gap after the daily job missed days:
+
+```bash
+python scripts/backfill_mtgjson_history.py            # downloads ~150 MB, takes ~6 min
+python scripts/backfill_mtgjson_history.py --dry-run  # report what it would write
+```
+
 Buylist prices are for near-mint copies, while TCGplayer's market price
 reflects whatever condition actually sold - so a buylist above retail
 (common on old cards) is usually a condition gap, not free money.
@@ -149,6 +159,7 @@ make anything here public-facing.
 scripts/fetch_prices.py               downloads bulk data, writes latest.db + today's history file
 .github/workflows/fetch-mtgjson-prices.yml  the daily MTGJSON (buylist) job
 scripts/fetch_mtgjson_prices.py       downloads MTGJSON AllPricesToday, writes today's mtgjson_history file
+scripts/backfill_mtgjson_history.py   (run locally) fills mtgjson_history/ from MTGJSON's ~90-day AllPrices
 scripts/build_history_db.py           (run locally) combines history/ and mtgjson_history/ into one queryable DB
 data/latest.db                        current snapshot (created on first run)
 data/history/YYYY-MM-DD.csv.gz        one file per day (created over time)

@@ -139,7 +139,15 @@ def write_snapshot(prices: dict, scryfall_ids: dict, snapshot_date: str,
     unknown: set = set()
     flat = {uuid: flatten_prices(entry, snapshot_date, unknown)
             for uuid, entry in prices.items()}
+    return write_flat_snapshot(flat, scryfall_ids, snapshot_date, tmp_path, unknown)
 
+
+def write_flat_snapshot(flat: dict, scryfall_ids: dict, snapshot_date: str,
+                        tmp_path: Path, unknown: set) -> tuple[int, int, list]:
+    """
+    Write {uuid: {column: price}} as one day's CSV (shared with the
+    backfill script). Returns (rows, rows_with_buylist, extra_columns).
+    """
     # Keep data for any new provider/finish MTGJSON adds, rather than
     # silently dropping it: append those columns after the known ones.
     extra = sorted(unknown)
