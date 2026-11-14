@@ -18,6 +18,34 @@ GitHub Actions, and keeps a running price history. No API keys needed.
 - The workflow commits both back to the repo, so history accumulates
   automatically for as long as it keeps running.
 
+### Second job: MTGJSON buylist + multi-vendor retail
+
+A separate daily workflow (`.github/workflows/fetch-mtgjson-prices.yml`,
+08:41 UTC) saves MTGJSON's `AllPricesToday` file - which adds **Card
+Kingdom buylist prices** and retail from several vendors - to
+**`data/mtgjson_history/YYYY-MM-DD.csv.gz`**, one file per day, never
+overwritten, same as the Scryfall history. The date is MTGJSON's own price
+date. It runs independently of the Scryfall job; either can fail without
+affecting the other.
+
+Columns:
+
+- `mtgjson_uuid` - one row per MTGJSON card uuid.
+- `scryfall_id` - join key to `latest.db` and `data/history/`. Blank for
+  the few thousand uuids MTGJSON has no Scryfall id for. **Not unique**:
+  MTGJSON sometimes splits one printing into several uuids (e.g. separate
+  foil / non-foil versions) that share a `scryfall_id` with different prices.
+- `snapshot_date`
+- `<provider>_<retail|buylist>_<normal|foil|etched>` price columns:
+  `tcgplayer`, `manapool`, `cardkingdom`, `cardmarket` (paper) and
+  `cardhoarder` (MTGO). Only Card Kingdom has buylist prices. `cardmarket`
+  is EUR; everything else is USD. If MTGJSON adds a new provider, its
+  columns are appended automatically.
+
+Buylist prices are for near-mint copies, while TCGplayer's market price
+reflects whatever condition actually sold - so a buylist above retail
+(common on old cards) is usually a condition gap, not free money.
+
 ## Setup
 
 1. Push these files to a new GitHub repository (public repos get unlimited
@@ -70,7 +98,19 @@ python scripts/build_history_db.py
 -- Price of a card over time
 SELECT snapshot_date, usd FROM price_history
 WHERE name = 'Lightning Bolt' ORDER BY snapshot_date;
+
+-- Card Kingdom buylist vs TCGplayer retail over time (MTGJSON history)
+SELECT p.snapshot_date, p.collector_number,
+       m.cardkingdom_buylist_normal, m.tcgplayer_retail_normal
+FROM mtgjson_price_history m
+JOIN price_history p ON p.scryfall_id = m.scryfall_id
+                    AND p.snapshot_date = m.snapshot_date
+WHERE p.name = 'Lightning Bolt' AND p.set_code = 'sta'
+ORDER BY p.snapshot_date;
 ```
+
+`build_history_db.py` loads `data/mtgjson_history/` into a second table,
+`mtgjson_price_history`, whenever those files exist.
 
 `history.db` isn't committed back to the repo - rebuild it locally whenever
 you want it (`--since YYYY-MM-DD` limits how much history it loads).
@@ -107,7 +147,10 @@ make anything here public-facing.
 ```
 .github/workflows/fetch-prices.yml   the daily cron job
 scripts/fetch_prices.py               downloads bulk data, writes latest.db + today's history file
-scripts/build_history_db.py           (run locally) combines history/*.csv.gz into one queryable DB
+.github/workflows/fetch-mtgjson-prices.yml  the daily MTGJSON (buylist) job
+scripts/fetch_mtgjson_prices.py       downloads MTGJSON AllPricesToday, writes today's mtgjson_history file
+scripts/build_history_db.py           (run locally) combines history/ and mtgjson_history/ into one queryable DB
 data/latest.db                        current snapshot (created on first run)
 data/history/YYYY-MM-DD.csv.gz        one file per day (created over time)
+data/mtgjson_history/YYYY-MM-DD.csv.gz  one MTGJSON buylist/retail file per day
 ```
